@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AI Risk Manager"
+description = "A merchant-facing defensive risk operations dashboard for analyzing chargebacks, generating evidence response packets, monitoring model performance, and spotting coordinated abuse patterns."
+version = "1.0.0"
+id = "artifacts/ai-risk-manager"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21398
+
+[services.development]
+run = "pnpm --filter @workspace/ai-risk-manager run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ai-risk-manager", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/ai-risk-manager/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21398"
+BASE_PATH = "/"
