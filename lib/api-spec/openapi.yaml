@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: risk
+    description: Defensive risk operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /risk/summary:
+    get:
+      operationId: getRiskSummary
+      tags: [risk]
+      summary: Get dashboard risk summary
+      responses:
+        "200":
+          description: Summary of current defensive risk activity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSummary"
+  /risk/feed:
+    get:
+      operationId: getRiskFeed
+      tags: [risk]
+      summary: Get recent transaction risk feed
+      responses:
+        "200":
+          description: Recent synthetic transactions scored by the defensive engine
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskFeedItem"
+  /risk/metrics:
+    get:
+      operationId: getRiskMetrics
+      tags: [risk]
+      summary: Get held-out model performance metrics
+      responses:
+        "200":
+          description: Honest precision, recall, and cost metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskMetrics"
+  /risk/rings:
+    get:
+      operationId: getRiskRings
+      tags: [risk]
+      summary: Get defensive abuse ring clusters
+      responses:
+        "200":
+          description: Related account and transaction clusters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskRing"
+  /risk/analyze:
+    post:
+      operationId: analyzeDispute
+      tags: [risk]
+      summary: Analyze a disputed transaction and create an evidence response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisputeInput"
+      responses:
+        "200":
+          description: Scored dispute with a structured defensive evidence response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisputeAnalysis"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    RiskSummary:
+      type: object
+      properties:
+        openDisputes: { type: number }
+        protectedRevenue: { type: number }
+        winRate: { type: number }
+        avgResponseTime: { type: number }
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+      required: [openDisputes, protectedRevenue, winRate, avgResponseTime, trend]
+    TrendPoint:
+      type: object
+      properties:
+        day: { type: string }
+        prevented: { type: number }
+        disputes: { type: number }
+      required: [day, prevented, disputes]
+    RiskFeedItem:
+      type: object
+      properties:
+        id: { type: string }
+        customer: { type: string }
+        amount: { type: number }
+        reason: { type: string }
+        score: { type: number }
+        decision: { type: string, enum: [review, protected, escalate] }
+        timestamp: { type: string }
+        signals:
+          type: array
+          items: { type: string }
+      required: [id, customer, amount, reason, score, decision, timestamp, signals]
+    RiskMetrics:
+      type: object
+      properties:
+        sampleSize: { type: number }
+        precision: { type: number }
+        recall: { type: number }
+        f1: { type: number }
+        accuracy: { type: number }
+        falsePositiveCost: { type: number }
+        falseNegativeCost: { type: number }
+        matrix:
+          type: object
+          properties:
+            truePositive: { type: number }
+            trueNegative: { type: number }
+            falsePositive: { type: number }
+            falseNegative: { type: number }
+          required: [truePositive, trueNegative, falsePositive, falseNegative]
+      required: [sampleSize, precision, recall, f1, accuracy, falsePositiveCost, falseNegativeCost, matrix]
+    RiskRing:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        risk: { type: string, enum: [high, medium, watch] }
+        members: { type: number }
+        exposure: { type: number }
+        sharedSignals:
+          type: array
+          items: { type: string }
+      required: [id, label, risk, members, exposure, sharedSignals]
+    DisputeInput:
+      type: object
+      properties:
+        orderId: { type: string, minLength: 1 }
+        amount: { type: number, minimum: 0 }
+        reasonCode: { type: string, minLength: 1 }
+        customerMessage: { type: string }
+        deliveryConfirmed: { type: boolean }
+        customerTenureMonths: { type: number, minimum: 0 }
+        priorDisputes: { type: number, minimum: 0 }
+        deviceMatch: { type: boolean }
+      required: [orderId, amount, reasonCode, customerMessage, deliveryConfirmed, customerTenureMonths, priorDisputes, deviceMatch]
+    EvidenceItem:
+      type: object
+      properties:
+        title: { type: string }
+        detail: { type: string }
+        strength: { type: string, enum: [strong, supporting, gap] }
+      required: [title, detail, strength]
+    DisputeAnalysis:
+      type: object
+      properties:
+        orderId: { type: string }
+        score: { type: number }
+        winProbability: { type: number }
+        decision: { type: string, enum: [review, protected, escalate] }
+        rationale: { type: string }
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceItem"
+        packet: { type: string }
+      required: [orderId, score, winProbability, decision, rationale, evidence, packet]
+
